@@ -4,7 +4,6 @@ go 1.24.0
 
 require (
 	github.com/andygrunwald/go-jira v1.16.0
-	github.com/google/go-github/v69 v69.2.0
 	github.com/ollama/ollama v0.5.12
 )
 
