@@ -3,37 +3,62 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
+	"strings"
 )
 
 func getDiff() (string, error) {
-	remote, err := exec.Command("git", "remote").Output()
+	remote, err := git("remote")
 	if err != nil {
-		return "", fmt.Errorf("failed to get remote: %v", err)
+		return "", err
 	}
 
-	defaultBranch, err := exec.Command("git", "rev-parse", "--abbrev-ref", fmt.Sprintf("%s/HEAD", remote)).Output()
+	remoteOutput, err := git("remote", "show", remote)
 	if err != nil {
-		return "", fmt.Errorf("failed to get default branch: %v", err)
+		return "", err
 	}
 
-	baseCommit, err := exec.Command("git", "merge-base", string(defaultBranch), "HEAD").Output()
+	headBranch, err := parseHeadBranch(remoteOutput)
 	if err != nil {
-		return "", fmt.Errorf("failed to get base commit: %v", err)
+		return "", err
 	}
 
-	diff, err := exec.Command("git", "diff", string(baseCommit)).Output()
+	baseCommit, err := git("merge-base", headBranch, "HEAD")
 	if err != nil {
-		return "", fmt.Errorf("failed to get diff: %v", err)
+		return "", err
+	}
+
+	diff, err := git("diff", baseCommit)
+	if err != nil {
+		return "", err
 	}
 
 	return string(diff), nil
 }
 
 func getBranch() (string, error) {
-	output, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	output, err := git("rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
-		return "", fmt.Errorf("failed to get branch: %v", err)
+		return "", err
 	}
 
-	return string(output), nil
+	return output, nil
+}
+
+func parseHeadBranch(gitRemoteShowOutput string) (string, error) {
+	re := regexp.MustCompile(`HEAD branch:\s+(\S+)`)
+	matches := re.FindStringSubmatch(gitRemoteShowOutput)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("failed to parse HEAD branch")
+	}
+	return strings.TrimSpace(matches[1]), nil
+}
+
+func git(args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to run git %v: %v", args, err)
+	}
+	return strings.TrimSpace(string(output)), nil
 }
