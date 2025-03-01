@@ -9,18 +9,6 @@ import (
 func main() {
 	ctx := context.Background()
 
-	githubClient, err := GitHubClient()
-	if err != nil {
-		fmt.Println("Error creating GitHub client:", err)
-		os.Exit(1)
-	}
-
-	jiraClient, err := JiraClient()
-	if err != nil {
-		fmt.Println("Error creating Jira client:", err)
-		os.Exit(1)
-	}
-
 	llmClient, err := LLMClient(ctx)
 	if err != nil {
 		fmt.Println("Error creating LLM client:", err)
@@ -34,13 +22,22 @@ func main() {
 	}
 	fmt.Println("Current branch:", gitBranch)
 
-	if githubClient != nil {
-		fmt.Println("GitHub client created")
+	diff, err := getDiff()
+	if err != nil {
+		fmt.Println("Error getting git diff:", err)
+		os.Exit(1)
 	}
-	if jiraClient != nil {
-		fmt.Println("Jira client created")
+
+	description, err := diffDescription(llmClient, diff, ctx)
+	if err != nil {
+		fmt.Println("Error getting diff description:", err)
+		os.Exit(1)
 	}
-	if llmClient != nil {
-		fmt.Println("LLM client created")
+
+	prCreated, err := gh("pr", "create", "--title", fmt.Sprintf("\"%s\"", gitBranch), "--body", fmt.Sprintf("\"%s\"", description))
+	if err != nil {
+		fmt.Println("Error creating PR:", err)
+		os.Exit(1)
 	}
+	fmt.Println("PR created:", prCreated)
 }
