@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -51,13 +52,14 @@ func main() {
 	}
 
 	fmt.Println("Does the description look good? (y/n)")
+	affirmative := []string{"y", "yes"}
 	var answer string
 	n, err := fmt.Scanln(&answer)
 	if err != nil {
 		fmt.Println("Error reading input:", err)
 		os.Exit(1)
 	}
-	if n != 1 || strings.ToLower(answer) != "y" || strings.ToLower(answer) != "yes" {
+	if n != 1 || !slices.Contains(affirmative, strings.ToLower(answer)) {
 		fmt.Println("Exiting")
 		os.Exit(0)
 	}
@@ -68,10 +70,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	prCreated, err := gh("pr", "create", "--title", fmt.Sprintf("\"%s\"", gitBranch), "--body", fmt.Sprintf("\"%s\"", editedDescription))
-	if err != nil {
-		fmt.Println("Error creating PR:", err)
-		os.Exit(1)
-	}
-	fmt.Println("PR created:", prCreated)
+	gh("pr", "create", "--title", fmt.Sprintf("\"%s\"", gitBranch), "--body", fmt.Sprintf("\"%s\"", editedDescription))
 }
